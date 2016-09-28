@@ -29,3 +29,12 @@ Keep in mind this:
 
 - screen coordinate system, in Three.js, is normally:
   X pointing right, Y up, and Z out of the screen towards the user;
+
+You can find an example in the _examples_ folder. If you have Python installed,
+you can _cd_ to _ex1_ folder, open a console and type:
+
+python -m SimpleHTTPServer 8000
+
+Then, in your favourite non-IE browser, type http://localhost:8000/index.html
+
+If you want to rebuild the example yourself, you have the _gulpfile_ to use.
