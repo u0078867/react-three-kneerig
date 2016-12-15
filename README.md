@@ -33,6 +33,7 @@ Keep in mind this:
   X pointing right, Y up, and Z out of the screen towards the user;
 
 For a live example, click [here](https://u0078867.github.io/react-three-kneerig/examples/ex1/).
+Other examples (ex2, ...) may be available.
 
 For a standalone running example, You can find an example in the _examples_
 folder. If you have Python installed, you can _cd_ to any example folder, open a
