@@ -6,6 +6,31 @@ window.THREE = require('three');    // trick to make THREE global so STLLoader c
 import TrackballControls from './trackball';
 import Stats from 'stats.js';
 var STLLoader = require('./STLLoader');
+var MeshLine = require('three.meshline').MeshLine;
+var MeshLineMaterial = require('three.meshline').MeshLineMaterial;
+
+
+// Set default props variable
+
+var eyePose = [
+    1,  0,  0,  0,
+    0,  1,  0,  0,
+    0,  0,  1,  0,
+    0,  0,  0,  1
+];
+
+var nullPosition = [null, null, null];
+
+var defScreenToLabPose = [
+    1,  0,  0,  0,
+    0,  0,  1,  0,
+    0, -1,  0,  0,
+    0,  0,  0,  1
+];
+
+var defInitCameraPosition = [0, 300, 500];   // in screen coordinate system
+
+var defInitCameraLookAt = [0, 300, 200];     // in screen coordinate system
 
 /*
 
@@ -32,7 +57,26 @@ height.
 */
 
 
+
 class KneeModel extends React.Component {
+
+    static defaultProps = {
+        width: 300,
+        height: 300,
+        pixelRatio: 1,
+        femurFile: '',
+        tibiaFile: '',
+        femurToLabPose: eyePose,
+        tibiaToLabPose: eyePose,
+        SMCLFemurInsertionPosition: nullPosition,
+        SMCLTibiaInsertionPosition: nullPosition,
+        showFemur: true,
+        showTibia: true,
+        showSMCL: true,
+        screenToLabPose: defScreenToLabPose,
+        initCameraPosition: defInitCameraPosition,
+        initCameraLookAt: defInitCameraLookAt,
+    };
 
     static propTypes = {
         width: React.PropTypes.number.isRequired,
@@ -57,13 +101,10 @@ class KneeModel extends React.Component {
 
     }
 
-    //_createMeshFromLoadedGeometry = (geometry) => {
-    _createMeshFromLoadedGeometry(geometry) {
 
-        //var material = new THREE.MeshBasicMaterial({color: 0x00ff00});
-        //var material = new THREE.MeshPhongMaterial({color: 0x757247});
-        //var material = new THREE.MeshPhongMaterial( { color: 0xff5533, specular: 0x111111, shininess: 30 } );
-        var material = new THREE.MeshLambertMaterial( { color: 0xe1c058 } );
+    _createMeshBoneFromLoadedGeometry(geometry) {
+
+        var material = new THREE.MeshLambertMaterial({color: 0xe1c058});
 
         var mesh = new THREE.Mesh(geometry, material);
 
@@ -75,9 +116,47 @@ class KneeModel extends React.Component {
     }
 
 
+    _createMeshLigament = (color, width) => {
+
+        var geometry = new THREE.Geometry();
+        geometry.vertices = [
+            new THREE.Vector3(),
+            new THREE.Vector3(),
+        ];
+        var meshLine = new MeshLine();
+        meshLine.setGeometry(geometry);
+
+        var resolution = new THREE.Vector2(this.props.width, this.props.height);
+        var material = new MeshLineMaterial({
+            useMap: false,
+            color: new THREE.Color(color),
+            opacity: 1,
+            resolution: resolution,
+            sizeAttenuation: !false,
+            lineWidth: width,
+        });
+
+        var mesh = new THREE.Mesh(meshLine.geometry, material);
+        mesh.userData.resolution = resolution;
+        mesh.userData.origMeshLine = meshLine;
+        mesh.userData.origGeometry = geometry;
+
+        return mesh;
+
+    }
+
+
+    _makeSMCL = () => {
+
+        this.SMCL = this._createMeshLigament(0xff0000, 3);
+        this.refs.lab.add(this.SMCL);
+
+    }
+
+
     _onLoadFemur = (geometry) => {
 
-        this.femur = this._createMeshFromLoadedGeometry(geometry);
+        this.femur = this._createMeshBoneFromLoadedGeometry(geometry);
         this.refs.lab.add(this.femur);
         this.setState({femurFileLoaded: true});
 
@@ -86,7 +165,7 @@ class KneeModel extends React.Component {
 
     _onLoadTibia = (geometry) => {
 
-        this.tibia = this._createMeshFromLoadedGeometry(geometry);
+        this.tibia = this._createMeshBoneFromLoadedGeometry(geometry);
         this.refs.lab.add(this.tibia);
         this.setState({tibiaFileLoaded: true});
 
@@ -131,6 +210,25 @@ class KneeModel extends React.Component {
     }
 
 
+    _updateSMCL = () => {
+
+        this.SMCL.visible = this.props.showSMCL;
+
+        var geometry = this.SMCL.userData.origGeometry;
+        var meshLine = this.SMCL.userData.origMeshLine;
+        geometry.vertices = [
+            new THREE.Vector3(...this.props.SMCLFemurInsertionPosition),
+            new THREE.Vector3(...this.props.SMCLTibiaInsertionPosition),
+        ];
+        meshLine.setGeometry(geometry);
+
+        if (this.resized) {
+            this.SMCL.userData.resolution.set(this.props.width, this.props.height);
+        }
+
+    }
+
+
     _updateLab = () => {
 
         this.refs.lab.matrix.set(...this.props.screenToLabPose);
@@ -149,11 +247,13 @@ class KneeModel extends React.Component {
             this._updateTibia();
         }
 
+        this._updateSMCL();
+
         this._updateLab();
 
         if (this.resized) {
             this.controls.handleResize();
-            this.resized = false;
+            this.resized = false;   // only after the mesh updates
         }
         this.controls.update();
 
@@ -206,14 +306,6 @@ class KneeModel extends React.Component {
         this.refs.scene.add(new THREE.HemisphereLight(0xffffff, 0x111122));
 
         // Add ground
-        /*
-        var ground = new THREE.Mesh(
-        	new THREE.PlaneBufferGeometry(1000, 1000),
-        	new THREE.MeshPhongMaterial({color: 0x999999, specular: 0x101010})
-        );
-        ground.receiveShadow = true;
-        this.refs.lab.add(ground);
-        */
         var ground = new THREE.GridHelper(1000, 21);
         ground.rotation.x = Math.PI / 2;  // default is on XZ plane, so rotation needed
         this.refs.lab.add(ground);
@@ -223,6 +315,9 @@ class KneeModel extends React.Component {
 
         // Load tibia
         this._loadTibiaFile(this.props.tibiaFile);
+
+        // Make SMCL
+        this._makeSMCL();
 
     }
 
