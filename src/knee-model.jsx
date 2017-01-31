@@ -216,7 +216,6 @@ class KneeModel extends React.Component {
         var geometry = this.SMCL.userData.origGeometry;
         var meshLine = this.SMCL.userData.origMeshLine;
         var vertices = [];
-        console.log(this.props.SMCLPath);
         for (var i = 0; i < this.props.SMCLPath.length; i++) {
             vertices.push(new THREE.Vector3(...this.props.SMCLPath[i]))
         }
