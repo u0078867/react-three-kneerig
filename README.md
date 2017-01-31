@@ -21,7 +21,7 @@ The component __KneeModel__ has the following props:
 * _femurFile, tibiaFile_ (string): URL of STL files (e.g. http://localhost:8081/femur.stl, './femur.stl');
   Valid STL files are both ASCII and binary. You have to start a server to avoid CORS warnings.
 * _femurToLabPose, tibiaToLabPose_ (array): flattened version fo the 4x4 affine matrix from femur/tibia to global coordinate system;
-* _SMCLFemurInsertionPosition, SMCLTibiaInsertionPosition_ (array): 3-elements array representing MSCL insertions positions (in global coordinate system);
+* _SMCLPath_ (array): array of 3-elements arrays representing MSCL insertions positions and via paths (in global coordinate system);
 * _showFemur, showTibia_ (bool): whether to show femur and tibia in the scene;
 * _screenToLabPose_ (array): flattened version fo the 4x4 affine matrix from screen to global coordinate system;
 * _initCameraPosition_ (array): 3-elements array representing initial camera position (in screen coordinate system);

@@ -33,6 +33,10 @@ var SMCLTibiaInsertionPosition = [21.1704, -108.4569, 176.2609];
 
 var SMCLTibiaInsertionPositionPert = SMCLTibiaInsertionPosition.slice(0);
 
+var SMCLPath = [SMCLFemurInsertionPosition, SMCLTibiaInsertionPositionPert];    // can give issues if empty
+
+
+
 var screenToLabPose = [
     1,  0,  0,  0,
     0,  0,  1,  0,
@@ -54,6 +58,7 @@ class Container extends React.Component {
         this.state = {
             viewerWidth: 0,
             viewerHeight: 0,
+            updated: false,
         }
 
     }
@@ -87,6 +92,8 @@ class Container extends React.Component {
         SMCLTibiaInsertionPositionPert[0] = SMCLTibiaInsertionPosition[0] + dx;
         SMCLTibiaInsertionPositionPert[1] = SMCLTibiaInsertionPosition[1] + dy;
         SMCLTibiaInsertionPositionPert[2] = SMCLTibiaInsertionPosition[2] + dz;
+        SMCLPath = [SMCLFemurInsertionPosition, SMCLTibiaInsertionPositionPert];
+        this.setState({updated: true});
     }
 
 
@@ -116,8 +123,7 @@ class Container extends React.Component {
                     femurToLabPose={femurToLabPose}
                     tibiaToLabPose={tibiaToLabPosePert}
 
-                    SMCLFemurInsertionPosition={SMCLFemurInsertionPosition}
-                    SMCLTibiaInsertionPosition={SMCLTibiaInsertionPositionPert}
+                    SMCLPath={SMCLPath}
 
                     showFemur={true}
                     showTibia={true}

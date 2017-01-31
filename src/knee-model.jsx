@@ -68,8 +68,7 @@ class KneeModel extends React.Component {
         tibiaFile: '',
         femurToLabPose: eyePose,
         tibiaToLabPose: eyePose,
-        SMCLFemurInsertionPosition: nullPosition,
-        SMCLTibiaInsertionPosition: nullPosition,
+        SMCLPath: [nullPosition, nullPosition],
         showFemur: true,
         showTibia: true,
         showSMCL: true,
@@ -216,10 +215,13 @@ class KneeModel extends React.Component {
 
         var geometry = this.SMCL.userData.origGeometry;
         var meshLine = this.SMCL.userData.origMeshLine;
-        geometry.vertices = [
-            new THREE.Vector3(...this.props.SMCLFemurInsertionPosition),
-            new THREE.Vector3(...this.props.SMCLTibiaInsertionPosition),
-        ];
+        var vertices = [];
+        console.log(this.props.SMCLPath);
+        for (var i = 0; i < this.props.SMCLPath.length; i++) {
+            vertices.push(new THREE.Vector3(...this.props.SMCLPath[i]))
+        }
+        geometry.vertices = vertices;
+
         meshLine.setGeometry(geometry);
 
         if (this.resized) {
