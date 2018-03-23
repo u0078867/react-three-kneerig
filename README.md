@@ -1,9 +1,9 @@
 React component, using [Three.js](https://threejs.org/) and
 [react-three-renderer](https://github.com/toxicFork/react-three-renderer)
-showing a 3D scene with STL femur and tibia models. The scene:
+showing a 3D scene with STL femur, tibia and patella models. The scene:
 
-* allows to load STL files for femur and tibia;
-* allows to set the pose for both;
+* allows to load STL files for femur/tibia/patella;
+* allows to set the pose for the bones;
 * allows to set insertions positions for SMCL (Superficial Medical Collateral Ligament);
 * allows to set initial camera position;
 * has trackball controls (pan, tilt, zoom);
@@ -18,11 +18,11 @@ The component __KneeModel__ has the following props:
 
 * _width, height_ (int): dimensions of the viewer, in pixels;
 * _pixelRatio_ (int): see [this](https://github.com/toxicFork/react-three-renderer/wiki/Entry-Point#pixelratio)
-* _femurFile, tibiaFile_ (string): URL of STL files (e.g. http://localhost:8081/femur.stl, './femur.stl');
+* _femurFile, tibiaFile, patellaFile_ (string): URL of STL files (e.g. http://localhost:8081/femur.stl, './femur.stl');
   Valid STL files are both ASCII and binary. You have to start a server to avoid CORS warnings.
-* _femurToLabPose, tibiaToLabPose_ (array): flattened version fo the 4x4 affine matrix from femur/tibia to global coordinate system;
+* _femurToLabPose, tibiaToLabPose, patellaToLabPose_ (array): flattened version fo the 4x4 affine matrix from femur/tibia/patella to global coordinate system;
 * _SMCLPath_ (array): array of 3-elements arrays representing MSCL insertions positions and via paths (in global coordinate system);
-* _showFemur, showTibia_ (bool): whether to show femur and tibia in the scene;
+* _showFemur, showTibia, showPatella_ (bool): whether to show femur/tibia/patella in the scene;
 * _screenToLabPose_ (array): flattened version fo the 4x4 affine matrix from screen to global coordinate system;
 * _initCameraPosition_ (array): 3-elements array representing initial camera position (in screen coordinate system);
 * _initCameraLookAt_ (array): 3-elements array representing initial camera target position (in screen coordinate system);
