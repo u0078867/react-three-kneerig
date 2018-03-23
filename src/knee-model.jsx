@@ -8,6 +8,7 @@ import Stats from 'stats.js';
 var STLLoader = require('./STLLoader');
 var MeshLine = require('three.meshline').MeshLine;
 var MeshLineMaterial = require('three.meshline').MeshLineMaterial;
+import _ from 'lodash';
 
 
 // Set default props variable
@@ -66,12 +67,17 @@ class KneeModel extends React.Component {
         pixelRatio: 1,
         femurFile: '',
         tibiaFile: '',
+        patellaFile: '',
         femurToLabPose: eyePose,
         tibiaToLabPose: eyePose,
-        SMCLPath: [nullPosition, nullPosition],
+        petellaToLabPose: eyePose,
+        //SMCLPath: [nullPosition, nullPosition],
+        ligaments: [],
+        points: [],
         showFemur: true,
         showTibia: true,
-        showSMCL: true,
+        showPatella: true,
+        //showSMCL: true,
         screenToLabPose: defScreenToLabPose,
         initCameraPosition: defInitCameraPosition,
         initCameraLookAt: defInitCameraLookAt,
@@ -93,6 +99,7 @@ class KneeModel extends React.Component {
             refresh: false,
             femurFileLoaded: false,
             tibiaFileLoaded: false,
+            patellaFileLoaded: false,
             cameraPosition: new THREE.Vector3(...this.props.initCameraPosition)
         }
 
@@ -115,10 +122,12 @@ class KneeModel extends React.Component {
     }
 
 
-    _createMeshLigament = (color, width) => {
+    _createMeshLigament = (label, color, width) => {
 
         var geometry = new THREE.Geometry();
         geometry.vertices = [
+            new THREE.Vector3(),
+            new THREE.Vector3(),
             new THREE.Vector3(),
             new THREE.Vector3(),
         ];
@@ -139,16 +148,69 @@ class KneeModel extends React.Component {
         mesh.userData.resolution = resolution;
         mesh.userData.origMeshLine = meshLine;
         mesh.userData.origGeometry = geometry;
+        mesh.userData.Nv = geometry.vertices.length;
+        mesh.userData.label = label;
+        mesh.userData.setPath = function(p) {
+            let geometry = this.userData.origGeometry;
+            let meshLine = this.userData.origMeshLine;
+            let vertices = [];
+            for (var i = 0; i < p.length; i++) {
+                vertices.push(new THREE.Vector3(...p[i]));
+            }
+            if (vertices.length == 0) vertices.push(new THREE.Vector3());
+            let last = vertices.splice(-1)[0];
+            for (var i = p.length; i < this.userData.Nv; i++) {
+                vertices.push(last);
+            }
+            geometry.vertices = vertices;
+            meshLine.setGeometry(geometry);
+            if (p.length < 2) {
+                this.visible = false;
+            }
+        }.bind(mesh);
 
         return mesh;
 
     }
 
 
-    _makeSMCL = () => {
+    _makeLigaments = () => {
 
-        this.SMCL = this._createMeshLigament(0xff0000, 3);
-        this.refs.lab.add(this.SMCL);
+        this.ligaments = new THREE.Group();
+        for (var p of this.props.ligaments) {
+            var meshLiga = this._createMeshLigament(p.label, p.color, p.width);
+            this.ligaments.add(meshLiga);
+        }
+        this.refs.lab.add(this.ligaments);
+
+    }
+
+    _makePoints = () => {
+
+        this.points = new THREE.Group();
+        for (var p of this.props.points) {
+            var meshPoint = this._createMeshPoint(p.label, p.color, p.radius, p.pos);
+            this.points.add(meshPoint);
+        }
+        this.refs.lab.add(this.points);
+
+    }
+
+
+    _createMeshPoint = (label, color, radius, pos) => {
+
+        var geometry = new THREE.SphereGeometry(radius, 32, 32);
+        var material = new THREE.MeshBasicMaterial({color: color});
+        var mesh = new THREE.Mesh(geometry, material);
+        mesh.userData.label = label;
+        return mesh;
+
+    }
+
+
+    _removePoints = () => {
+
+        this.refs.lab.remove(this.points);
 
     }
 
@@ -171,11 +233,19 @@ class KneeModel extends React.Component {
     }
 
 
+    _onLoadPatella = (geometry) => {
+
+        this.patella = this._createMeshBoneFromLoadedGeometry(geometry);
+        this.refs.lab.add(this.patella);
+        this.setState({patellaFileLoaded: true});
+
+    }
+
+
     _loadFemurFile = (file) => {
 
         this.refs.lab.remove(this.femur);
         this.loader.load(file, this._onLoadFemur);
-        this.setState({femurFileLoaded: false});
 
     }
 
@@ -184,7 +254,14 @@ class KneeModel extends React.Component {
 
         this.refs.lab.remove(this.tibia);
         this.loader.load(file, this._onLoadTibia);
-        this.setState({tibiaFileLoaded: false});
+
+    }
+
+
+    _loadPatellaFile = (file) => {
+
+        this.refs.lab.remove(this.patella);
+        this.loader.load(file, this._onLoadPatella);
 
     }
 
@@ -209,22 +286,64 @@ class KneeModel extends React.Component {
     }
 
 
-    _updateSMCL = () => {
+    _updatePatella = () => {
 
-        this.SMCL.visible = this.props.showSMCL;
+        this.patella.visible = this.props.showPatella;
 
-        var geometry = this.SMCL.userData.origGeometry;
-        var meshLine = this.SMCL.userData.origMeshLine;
-        var vertices = [];
-        for (var i = 0; i < this.props.SMCLPath.length; i++) {
-            vertices.push(new THREE.Vector3(...this.props.SMCLPath[i]))
+        this.patella.matrix.set(...this.props.patellaToLabPose);
+        this.patella.matrixAutoUpdate = false;
+
+    }
+
+
+    _updateLigaments = () => {
+
+        // Update existing ligaments, or create new ones
+        for (var p of this.props.ligaments) {
+            var mesh = _.find(this.ligaments.children, (m) => { return m.userData.label == p.label; });
+            if (mesh) {
+                mesh.visible = true;
+                mesh.userData.setPath(p.path)
+                mesh.material.uniforms.color.value.setHex(p.color);
+                if (this.resized) {
+                    mesh.userData.resolution.set(this.props.width, this.props.height);
+                }
+            } else {
+                var meshLiga = this._createMeshLigament(p.label, p.color, p.width);
+                meshLiga.userData.setPath(p.path)
+                this.ligaments.add(meshLiga);
+            }
         }
-        geometry.vertices = vertices;
+        // Hide unexisting ligaments (much less expensive than removing them)
+        for (var c of this.ligaments.children) {
+            var p = _.find(this.props.ligaments, {label: c.userData.label});
+            if (!p) {
+                c.visible = false;
+            }
+        }
 
-        meshLine.setGeometry(geometry);
+    }
 
-        if (this.resized) {
-            this.SMCL.userData.resolution.set(this.props.width, this.props.height);
+
+    _updatePoints = () => {
+
+        // Update existing points, or create new ones
+        for (var p of this.props.points) {
+            var mesh = _.find(this.points.children, (m) => { return m.userData.label == p.label; });
+            if (mesh) {
+                mesh.position.set(...p.pos);
+                mesh.material.color.setHex(p.color);
+            } else {
+                var meshPoint = this._createMeshPoint(p.label, p.color, p.radius, p.pos);
+                this.points.add(meshPoint);
+            }
+        }
+        // Hide unexisting points (much less expensive than removing them)
+        for (var c of this.points.children) {
+            var p = _.find(this.props.points, {label: c.userData.label});
+            if (!p) {
+                c.position.set(undefined, undefined, undefined);
+            }
         }
 
     }
@@ -248,9 +367,15 @@ class KneeModel extends React.Component {
             this._updateTibia();
         }
 
-        this._updateSMCL();
+        if (this.state.patellaFileLoaded) {
+            this._updatePatella();
+        }
+
+        this._updateLigaments();
 
         this._updateLab();
+
+        this._updatePoints();
 
         if (this.resized) {
             this.controls.handleResize();
@@ -317,8 +442,14 @@ class KneeModel extends React.Component {
         // Load tibia
         this._loadTibiaFile(this.props.tibiaFile);
 
-        // Make SMCL
-        this._makeSMCL();
+        // Load patella
+        this._loadPatellaFile(this.props.patellaFile);
+
+        // Make ligaments
+        this._makeLigaments();
+
+        // Make points
+        this._makePoints();
 
     }
 
@@ -347,6 +478,12 @@ class KneeModel extends React.Component {
         if (nextProps.tibiaFile != this.props.tibiaFile) {
             if (nextProps.tibiaFile != '') {
                 this._loadTibiaFile(nextProps.tibiaFile);
+            }
+        }
+
+        if (nextProps.patellaFile != this.props.patellaFile) {
+            if (nextProps.patellaFile != '') {
+                this._loadPatellaFile(nextProps.patellaFile);
             }
         }
 
